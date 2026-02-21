@@ -112,9 +112,15 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
   try {
     const response = await agentService.processMessage(phone, messageText);
 
-    // Aguarda um pequeno delay para simular digitação
-    await delay(1500);
-    await evolutionService.sendTextMessage(phone, response);
+    // Divide em partes pelo marcador [PAUSA] e envia cada uma separadamente
+    const parts = response.split('[PAUSA]').map((p) => p.trim()).filter(Boolean);
+    for (const part of parts) {
+      const typingMs = Math.min(part.length * 25, 3500);
+      await delay(800);
+      await evolutionService.sendTyping(phone, typingMs);
+      await delay(typingMs);
+      await evolutionService.sendTextMessage(phone, part);
+    }
 
     // Verifica se o agente escalou e notifica o atendente
     const escalation = await prisma.humanEscalation.findFirst({
