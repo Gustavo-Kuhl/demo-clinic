@@ -265,7 +265,7 @@ async function executeToolCall(
           },
           availableDays: slots.map((day) => ({
             date: day.date,
-            slots: day.slots.slice(0, 8), // Limita a 8 horários por dia para não sobrecarregar
+            slots: day.slots,
           })),
           message:
             slots.length === 0
@@ -306,10 +306,17 @@ async function executeToolCall(
           return { success: false, error: result.error };
         }
 
+        const cpfRaw = (patientData as any).cpf as string;
+        const cpfFormatted = cpfRaw
+          ? cpfRaw.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+          : '';
+
         return {
           success: true,
           appointment: {
             id: result.appointment.id,
+            patientName: patientData.name,
+            patientCpf: cpfFormatted,
             dentist: result.appointment.dentist.name,
             procedure: result.appointment.procedure.name,
             startTime: result.appointment.startTime,

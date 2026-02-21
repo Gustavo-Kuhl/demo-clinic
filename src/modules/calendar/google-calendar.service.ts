@@ -112,8 +112,8 @@ export async function getAvailableSlots(
 
     if (!hasConflict) {
       slots.push({
-        start: slotStart.toISOString(),
-        end: slotEnd.toISOString(),
+        start: slotStart.format(), // ISO com offset local ex: "2026-02-23T10:00:00-03:00"
+        end: slotEnd.format(),
         displayStart: slotStart.format('HH:mm'),
         displayDate: slotStart.locale('pt-br').format('ddd, DD MMM'),
       });
