@@ -11,6 +11,10 @@ RUN npm install
 
 COPY . .
 
+# Build frontend
+RUN cd frontend && npm install && npm run build
+
+# Build backend
 RUN npm run build
 RUN npx prisma generate
 
