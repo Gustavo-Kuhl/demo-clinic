@@ -1,0 +1,23 @@
+version: '3.9'
+
+# Banco de dados: Supabase (PostgreSQL gerenciado)
+# Não é necessário container local para o banco.
+# Configure DATABASE_URL e DIRECT_URL no arquivo .env com as credenciais do Supabase.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinica_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    networks:
+      - clinica_network
+
+networks:
+  clinica_network:
+    driver: bridge

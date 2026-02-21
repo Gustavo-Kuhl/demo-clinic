@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Necessário para Supabase com connection pooling
+}
+
+// ========================
+// PACIENTES
+// ========================
+model Patient {
+  id        String   @id @default(cuid())
+  phone     String   @unique // Número WhatsApp ex: "5511999998888"
+  name      String?
+  cpf       String?  @unique // CPF apenas números ex: "12345678900"
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments  Appointment[]
+  conversations Conversation[]
+
+  @@map("patients")
+}
+
+// ========================
+// DENTISTAS
+// ========================
+model Dentist {
+  id         String   @id @default(cuid())
+  name       String
+  specialty  String?  // Ex: "Ortodontia", "Endodontia", "Clínico Geral"
+  calendarId String   // ID do Google Calendar do dentista
+  phone      String?
+  email      String?
+  bio        String?  // Pequena bio para o bot apresentar
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments     Appointment[]
+  workingHours     WorkingHours[]
+  dentistProcedures DentistProcedure[]
+
+  @@map("dentists")
+}
+
+// ========================
+// HORÁRIOS DE TRABALHO
+// ========================
+model WorkingHours {
+  id        String @id @default(cuid())
+  dentistId String
+  dayOfWeek Int    // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+  startTime String // "08:00"
+  endTime   String // "18:00"
+  active    Boolean @default(true)
+
+  dentist Dentist @relation(fields: [dentistId], references: [id], onDelete: Cascade)
+
+  @@unique([dentistId, dayOfWeek])
+  @@map("working_hours")
+}
+
+// ========================
+// PROCEDIMENTOS
+// ========================
+model Procedure {
+  id              String  @id @default(cuid())
+  name            String  // Ex: "Limpeza Dental", "Clareamento"
+  description     String?
+  durationMinutes Int     // Duração em minutos
+  price           Float?
+  active          Boolean @default(true)
+
+  dentistProcedures DentistProcedure[]
+  appointments      Appointment[]
+
+  @@map("procedures")
+}
+
+// ========================
+// DENTISTA x PROCEDIMENTO (N:N)
+// ========================
+model DentistProcedure {
+  dentistId   String
+  procedureId String
+
+  dentist   Dentist   @relation(fields: [dentistId], references: [id], onDelete: Cascade)
+  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+
+  @@id([dentistId, procedureId])
+  @@map("dentist_procedures")
+}
+
+// ========================
+// AGENDAMENTOS
+// ========================
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String
+  dentistId       String
+  procedureId     String
+  googleEventId   String?           // ID do evento no Google Calendar
+  startTime       DateTime
+  endTime         DateTime
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?           // Observações do paciente
+  reminderSent24h Boolean           @default(false)
+  reminderSent2h  Boolean           @default(false)
+  surveySent      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient   Patient   @relation(fields: [patientId], references: [id])
+  dentist   Dentist   @relation(fields: [dentistId], references: [id])
+  procedure Procedure @relation(fields: [procedureId], references: [id])
+
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+  RESCHEDULED
+}
+
+// ========================
+// CONVERSAS (Histórico de chat)
+// ========================
+model Conversation {
+  id            String             @id @default(cuid())
+  patientId     String
+  startedAt     DateTime           @default(now())
+  lastMessageAt DateTime           @default(now())
+  status        ConversationStatus @default(ACTIVE)
+  context       Json?              // Contexto atual da conversa (estado do fluxo)
+
+  patient     Patient          @relation(fields: [patientId], references: [id])
+  messages    Message[]
+  escalations HumanEscalation[]
+
+  @@map("conversations")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+  ESCALATED
+}
+
+// ========================
+// MENSAGENS
+// ========================
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  direction      MessageDirection
+  content        String           @db.Text
+  timestamp      DateTime         @default(now())
+  role           String           @default("user") // "user" | "assistant" | "tool"
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+// ========================
+// ESCALAÇÃO HUMANA
+// ========================
+model HumanEscalation {
+  id             String           @id @default(cuid())
+  conversationId String
+  reason         String?
+  status         EscalationStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  resolvedAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@map("human_escalations")
+}
+
+enum EscalationStatus {
+  PENDING
+  RESOLVED
+}
+
+// ========================
+// FAQ
+// ========================
+model FAQ {
+  id       String  @id @default(cuid())
+  question String
+  answer   String  @db.Text
+  category String? // Ex: "pagamento", "horarios", "procedimentos"
+  active   Boolean @default(true)
+  order    Int     @default(0)
+
+  @@map("faqs")
+}
+
+// ========================
+// USUÁRIO ADMIN
+// ========================
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("admin_users")
+}
+
+// ========================
+// CONFIGURAÇÕES DO SISTEMA
+// ========================
+model SystemSettings {
+  id                   String  @id @default(cuid())
+  clinicName           String  @default("Clínica Odontológica")
+  clinicPhone          String?
+  clinicAddress        String?
+  attendantPhone       String? // WhatsApp do atendente para escalações
+  attendantEmail       String?
+  timezone             String  @default("America/Sao_Paulo")
+  botName              String  @default("Sofia")
+  botWelcomeMessage    String? @db.Text
+  workingDaysMessage   String? @db.Text // Mensagem com horários de funcionamento
+  cancellationPolicy   String? @db.Text
+
+  @@map("system_settings")
+}
