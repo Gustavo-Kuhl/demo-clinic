@@ -12,14 +12,6 @@ const navItems = [
   { to: '/configuracoes', label: 'Configurações', icon: <SettingsIcon /> },
 ]
 
-// Itens da barra inferior (mobile) — os 4 mais usados + botão Menu
-const bottomNavItems = [
-  { to: '/', label: 'Início', icon: <GridIcon /> },
-  { to: '/agendamentos', label: 'Agenda', icon: <CalIcon /> },
-  { to: '/pacientes', label: 'Pacientes', icon: <UsersIcon /> },
-  { to: '/escalacoes', label: 'Alertas', icon: <AlertIcon /> },
-]
-
 // Each nav item: py-2.5 (10px*2) + text-sm line-height (20px) = 40px
 // Gap between items: space-y-2 = 8px
 const ITEM_HEIGHT = 40
@@ -151,22 +143,12 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 lg:p-2">
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 lg:rounded-2xl">
 
-          {/* Topbar mobile — mostra título da página atual */}
+          {/* Topbar mobile — menu à esquerda, nome da página à direita */}
           <header
             className="lg:hidden flex items-center justify-between px-4 bg-navy-800 border-b border-white/10"
             style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))', paddingBottom: '0.75rem' }}
           >
-            {/* Logo + título */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C8 2 5 5 5 8c0 2 .5 3.5 2 5l1 4h8l1-4c1.5-1.5 2-3 2-5 0-3-3-6-7-6z" fill="white" fillOpacity=".95"/>
-                </svg>
-              </div>
-              <p className="font-display text-sm font-semibold text-white">{currentPage}</p>
-            </div>
-
-            {/* Botão menu completo */}
+            {/* Botão menu — esquerda */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 active:bg-white/20 transition-colors"
@@ -175,56 +157,18 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round"/>
               </svg>
             </button>
+
+            {/* Nome da página atual — direita */}
+            <p className="font-display text-sm font-semibold text-white">{currentPage}</p>
           </header>
 
-          {/* Content — pb-nav reserva espaço para a bottom nav no mobile */}
-          <main className="flex-1 overflow-y-auto p-4 pb-nav lg:p-8 lg:pb-8">
+          {/* Content */}
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             {children}
           </main>
         </div>
       </div>
 
-      {/* Bottom Navigation — apenas mobile */}
-      <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-navy-800 border-t border-white/10"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="flex items-stretch h-16">
-          {bottomNavItems.map((item) => {
-            const isActive = item.to === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.to)
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors active:bg-white/5"
-              >
-                <span className={`w-5 h-5 transition-colors ${isActive ? 'text-brand-400' : 'text-slate-500'}`}>
-                  {item.icon}
-                </span>
-                <span className={`text-[10px] font-medium leading-none transition-colors ${isActive ? 'text-brand-400' : 'text-slate-500'}`}>
-                  {item.label}
-                </span>
-              </NavLink>
-            )
-          })}
-
-          {/* Botão Menu — abre o sidebar com todos os itens */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-slate-500 active:bg-white/5 transition-colors"
-          >
-            <span className="w-5 h-5">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round"/>
-              </svg>
-            </span>
-            <span className="text-[10px] font-medium leading-none">Menu</span>
-          </button>
-        </div>
-      </nav>
     </div>
   )
 }
