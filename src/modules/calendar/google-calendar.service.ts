@@ -89,14 +89,15 @@ export async function getAvailableSlots(
   // Gera slots de acordo com a duração
   const slots: TimeSlot[] = [];
   let currentSlot = startOfDay;
+  const now = dayjs().tz(TIMEZONE); // referência de "agora" no fuso da clínica
 
   while (currentSlot.add(durationMinutes, 'minute').isBefore(endOfDay) ||
          currentSlot.add(durationMinutes, 'minute').isSame(endOfDay)) {
     const slotEnd = currentSlot.add(durationMinutes, 'minute');
     const slotStart = currentSlot;
 
-    // Verifica se o slot está no passado
-    if (slotStart.isBefore(dayjs())) {
+    // Jamais exibe slots no passado (comparação no mesmo fuso da clínica)
+    if (!slotStart.isAfter(now)) {
       currentSlot = currentSlot.add(30, 'minute');
       continue;
     }

@@ -1,4 +1,5 @@
 import type OpenAI from 'openai';
+import dayjs from 'dayjs';
 import { openai, OPENAI_MODEL } from '../../config/openai';
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
@@ -286,6 +287,13 @@ async function executeToolCall(
           startTime: string;
           notes?: string;
         };
+
+        // Rejeita horários no passado
+        if (dayjs(startTime).isBefore(dayjs())) {
+          return {
+            error: 'Não é possível agendar consultas em datas ou horários passados. Por favor, escolha um horário futuro.',
+          };
+        }
 
         // Verifica se o paciente está cadastrado
         const patientData = await prisma.patient.findUnique({ where: { id: patientId } });
