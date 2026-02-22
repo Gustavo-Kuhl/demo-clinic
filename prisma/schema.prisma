@@ -13,7 +13,7 @@ datasource db {
 // ========================
 model Patient {
   id        String   @id @default(cuid())
-  phone     String   @unique // Número WhatsApp ex: "5511999998888"
+  phone     String   // Número WhatsApp ex: "5511999998888" (não único: mesmo celular pode ter vários pacientes)
   name      String?
   cpf       String?  @unique // CPF apenas números ex: "12345678900"
   email     String?

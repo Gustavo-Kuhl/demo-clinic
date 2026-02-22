@@ -195,7 +195,7 @@ export const aiTools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: 'register_patient',
       description:
-        'Cadastra ou atualiza os dados do paciente (nome e CPF). Use assim que o paciente informar seu nome e/ou CPF durante a conversa.',
+        'Cadastra ou atualiza os dados do paciente (nome e CPF). Use assim que o paciente informar seu nome e/ou CPF. Use createNew=true quando o agendamento for para outra pessoa (familiar, dependente) que usa o mesmo celular.',
       parameters: {
         type: 'object',
         properties: {
@@ -206,6 +206,10 @@ export const aiTools: OpenAI.Chat.ChatCompletionTool[] = [
           cpf: {
             type: 'string',
             description: 'CPF do paciente (apenas números, ex: "12345678900").',
+          },
+          createNew: {
+            type: 'boolean',
+            description: 'Se true, cria um novo cadastro (para agendar para outra pessoa no mesmo celular, como familiar ou dependente). O novo paciente ficará ativo para o próximo agendamento.',
           },
         },
         required: [],

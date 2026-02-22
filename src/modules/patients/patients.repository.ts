@@ -1,20 +1,31 @@
 import { prisma } from '../../config/database';
 
+/**
+ * Encontra o paciente principal do número (mais antigo) ou cria um novo.
+ * phone não é único — um número pode ter múltiplos pacientes (familiar, responsável, etc.)
+ */
 export async function findOrCreatePatient(phone: string) {
-  return prisma.patient.upsert({
+  const existing = await prisma.patient.findFirst({
     where: { phone },
-    update: {},
-    create: { phone },
+    orderBy: { createdAt: 'asc' }, // pega o cadastro mais antigo (paciente principal)
   });
+  if (existing) return existing;
+  return prisma.patient.create({ data: { phone } });
 }
 
-export async function updatePatient(
+/**
+ * Cria um novo paciente com o mesmo número de telefone (para agendamento de terceiros).
+ */
+export async function createPatientForPhone(
   phone: string,
-  data: { name?: string; cpf?: string; email?: string },
+  data: { name?: string; cpf?: string },
 ) {
-  return prisma.patient.update({
-    where: { phone },
-    data,
+  return prisma.patient.create({
+    data: {
+      phone,
+      name: data.name || null,
+      cpf: data.cpf ? data.cpf.replace(/\D/g, '') : null,
+    },
   });
 }
 
@@ -29,11 +40,13 @@ export async function updatePatientById(
 }
 
 export async function findPatientByPhone(phone: string) {
-  return prisma.patient.findUnique({ where: { phone } });
+  return prisma.patient.findFirst({
+    where: { phone },
+    orderBy: { createdAt: 'asc' },
+  });
 }
 
 export async function findPatientByCpf(cpf: string) {
-  // Remove formatação, aceita "123.456.789-00" ou "12345678900"
   const cleanCpf = cpf.replace(/\D/g, '');
   return prisma.patient.findUnique({ where: { cpf: cleanCpf } });
 }

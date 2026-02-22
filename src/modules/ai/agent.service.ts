@@ -99,6 +99,8 @@ export async function processMessage(
 
   let iterations = 0;
   let finalResponse = '';
+  // Permite que register_patient(createNew) troque o paciente ativo mid-session
+  let activePatientId = patient.id;
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
@@ -140,8 +142,9 @@ export async function processMessage(
       const toolResult = await executeToolCall(
         toolName,
         toolArgs,
-        patient.id,
+        activePatientId,
         conversation.id,
+        (newId) => { activePatientId = newId; },
       );
 
       messages.push({
@@ -178,6 +181,7 @@ async function executeToolCall(
   args: Record<string, unknown>,
   patientId: string,
   conversationId: string,
+  onPatientSwitch?: (newPatientId: string) => void,
 ): Promise<unknown> {
   try {
     switch (toolName) {
@@ -443,7 +447,11 @@ async function executeToolCall(
       }
 
       case 'register_patient': {
-        const { name, cpf } = args as { name?: string; cpf?: string };
+        const { name, cpf, createNew } = args as {
+          name?: string;
+          cpf?: string;
+          createNew?: boolean;
+        };
         if (!name && !cpf) {
           return { error: 'Informe pelo menos o nome ou CPF para cadastrar.' };
         }
@@ -456,6 +464,28 @@ async function executeToolCall(
           if (existing && existing.id !== patientId) {
             return { error: 'Este CPF já está cadastrado para outro paciente.' };
           }
+        }
+
+        // createNew: cria um novo paciente com o mesmo telefone (ex: familiar)
+        if (createNew) {
+          const currentPatient = await prisma.patient.findUnique({ where: { id: patientId } });
+          const newPatient = await patientsRepo.createPatientForPhone(
+            currentPatient?.phone || '',
+            { name, cpf: cleanCpf },
+          );
+          // Atualiza a conversa para apontar ao novo paciente
+          await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { patientId: newPatient.id },
+          });
+          // Notifica o loop para usar o novo patientId nas próximas tools
+          onPatientSwitch?.(newPatient.id);
+          return {
+            success: true,
+            name: newPatient.name,
+            cpf: cleanCpf,
+            message: 'Novo paciente cadastrado. Os próximos agendamentos serão para esta pessoa.',
+          };
         }
 
         await patientsRepo.updatePatientById(patientId, {
