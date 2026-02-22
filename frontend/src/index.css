@@ -41,3 +41,13 @@ h1, h2, h3, h4, h5 {
     focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
     placeholder:text-slate-400 transition-colors;
 }
+
+/* Safe area insets — notch (iPhone) e home indicator */
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.mt-safe { margin-top: env(safe-area-inset-top, 0px); }
+
+/* Bottom nav clearance: altura da barra (64px) + home indicator */
+.pb-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}

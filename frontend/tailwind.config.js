@@ -36,6 +36,10 @@ export default {
           from: { opacity: '0', transform: 'translateX(-12px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
+        'slide-up': {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
+        },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
@@ -44,6 +48,7 @@ export default {
       animation: {
         'fade-in': 'fade-in 0.35s ease both',
         'slide-in': 'slide-in 0.3s ease both',
+        'slide-up': 'slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1) both',
         shimmer: 'shimmer 1.5s infinite linear',
       },
     },
