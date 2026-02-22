@@ -268,6 +268,12 @@ async function executeToolCall(
 
         // Modo 2: paciente já escolheu o dia — retorna horários do dia específico
         if (targetDate) {
+          // Valida formato YYYY-MM-DD antes de qualquer coisa
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+            return {
+              error: `targetDate inválido: "${targetDate}". Use o campo "date" (YYYY-MM-DD) do array availableDates retornado anteriormente, ex: "2026-02-23".`,
+            };
+          }
           const dayOfWeek = dayjs.tz(targetDate, env.TIMEZONE).day();
           const wh = workingHoursByDay.find((h) => h.dayOfWeek === dayOfWeek);
           if (!wh) {

@@ -78,7 +78,9 @@ Interprete mensagens curtas pelo contexto da conversa. Não peça confirmação 
 | "Remarcar", "mudar horário", "adiantar", "reagendar" | Quer reagendar |
 | "Minhas consultas", "o que tenho marcado", "meus agendamentos" | Quer ver consultas agendadas |
 | "Sim", "pode ser", "esse", "ok", "quero", "pode" | Confirmando opção anterior |
-| Número isolado como "1", "2", "10", "14h" | Escolhendo horário da lista apresentada |
+| Número isolado ("1", "2", "3") após lista de **dias** | Selecionando o dia de número correspondente da lista — chame \`get_available_slots\` com o \`date\` desse item |
+| Número isolado ou horário ("1", "2", "10h", "14h") após lista de **horários** | Selecionando o horário correspondente — exiba a pré-confirmação |
+| Nome de dia ("Segunda", "Terça", "Sexta") após lista de dias | Selecionando o dia pelo nome — encontre o \`date\` correspondente na lista e chame \`get_available_slots\` com esse \`targetDate\` |
 
 Se a mensagem tiver 1-3 palavras e houver contexto anterior na conversa, use o histórico para inferir a intenção sem pedir esclarecimentos desnecessários.
 
@@ -127,7 +129,9 @@ Ao agendar uma consulta, siga esta ordem:
    > 2. Terça-feira, 24 de fevereiro
    > ...
    > Qual dia você prefere?
-5. **Quando o paciente escolher um dia**: Chame \`get_available_slots\` **COM \`targetDate\`** (formato YYYY-MM-DD correspondente ao dia escolhido) para obter os horários. Apresente os horários disponíveis e pergunte qual prefere.
+5. **Quando o paciente escolher um dia**: Olhe o array \`availableDates\` retornado no passo 4. Identifique o item escolhido (por número de ordem ou por nome de dia) e use o campo \`date\` desse item (formato YYYY-MM-DD, ex: \`"2026-02-23"\`) como \`targetDate\`.
+   - ⚠️ **NUNCA passe o nome do dia ("Segunda-feira") como \`targetDate\`** — isso causa erro. Use exclusivamente o campo \`date\` (YYYY-MM-DD).
+   - Chame \`get_available_slots\` com esse \`targetDate\` para obter os horários do dia. Apresente os horários disponíveis e pergunte qual prefere.
 6. **Quando o paciente escolher um horário**: Exiba a pré-confirmação abaixo com os dados completos e pergunte se o paciente confirma. Aguarde "Sim" ou "Não".
 7. **Quando o paciente confirmar com "Sim"**:
    - Chame \`get_dentists\` **SEM nenhum filtro** para listar todos os dentistas.
