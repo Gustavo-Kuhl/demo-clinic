@@ -110,18 +110,26 @@ export async function processMessage(
   let finalResponse = '';
   // Permite que register_patient(createNew) troque o paciente ativo mid-session
   let activePatientId = patient.id;
+  // Rastreia agendamento criado com sucesso nesta sessão (fallback se OpenAI falhar depois)
+  let createdAppointmentData: Record<string, unknown> | null = null;
 
   while (iterations < MAX_TOOL_ITERATIONS) {
     iterations++;
 
-    const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages,
-      tools: aiTools,
-      tool_choice: 'auto',
-      temperature: 0.7,
-      max_tokens: 1024,
-    });
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: OPENAI_MODEL,
+        messages,
+        tools: aiTools,
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_tokens: 1024,
+      });
+    } catch (openaiError) {
+      logger.error('[AI] Erro na API OpenAI durante o loop do agente:', openaiError);
+      break;
+    }
 
     const choice = response.choices[0];
     const assistantMessage = choice.message;
@@ -156,6 +164,14 @@ export async function processMessage(
         (newId) => { activePatientId = newId; },
       );
 
+      // Rastreia agendamento criado com sucesso (proteção contra falha da OpenAI após criação)
+      if (toolName === 'create_appointment') {
+        const r = toolResult as Record<string, unknown>;
+        if (r.success && r.appointment) {
+          createdAppointmentData = r.appointment as Record<string, unknown>;
+        }
+      }
+
       messages.push({
         role: 'tool',
         tool_call_id: toolCall.id,
@@ -165,8 +181,29 @@ export async function processMessage(
   }
 
   if (!finalResponse) {
-    finalResponse =
-      'Desculpe, tive um pequeno problema técnico. Pode repetir sua mensagem? 😊';
+    if (createdAppointmentData) {
+      // Appointment criado mas OpenAI não gerou a resposta final — monta confirmação manualmente
+      const apt = createdAppointmentData as any;
+      const startFormatted = dayjs(apt.startTime)
+        .tz(env.TIMEZONE)
+        .locale('pt-br')
+        .format('dddd, DD [de] MMMM [de] YYYY [às] HH:mm');
+      finalResponse = [
+        '✅ *Consulta confirmada!*',
+        '',
+        `👤 *Paciente:* ${apt.patientName}`,
+        `🪪 *CPF:* ${apt.patientCpf}`,
+        `📋 *Procedimento:* ${apt.procedure}`,
+        `👨‍⚕️ *Dentista:* ${apt.dentist}`,
+        `📅 *Data e horário:* ${startFormatted}`,
+        '',
+        '_Chegue 10 minutos antes. Para cancelar ou reagendar, é só me avisar!_',
+      ].join('\n');
+      logger.warn('[AI] OpenAI falhou após create_appointment — usando confirmação de fallback');
+    } else {
+      finalResponse =
+        'Desculpe, tive um pequeno problema técnico. Pode repetir sua mensagem? 😊';
+    }
   }
 
   // 8. Salva a resposta do assistente
