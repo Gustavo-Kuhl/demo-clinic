@@ -43,7 +43,9 @@ export const aiTools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: 'get_available_slots',
       description:
-        'Busca horários disponíveis para agendamento de um dentista com um procedimento específico nos próximos 14 dias.',
+        'Busca disponibilidade de um dentista para um procedimento. ' +
+        'Sem targetDate: retorna apenas os DIAS disponíveis (use para perguntar ao paciente qual dia prefere). ' +
+        'Com targetDate: retorna os HORÁRIOS do dia específico escolhido pelo paciente.',
       parameters: {
         type: 'object',
         properties: {
@@ -57,7 +59,14 @@ export const aiTools: OpenAI.Chat.ChatCompletionTool[] = [
           },
           daysAhead: {
             type: 'number',
-            description: 'Quantos dias à frente buscar (padrão: 14). Máx: 30.',
+            description: 'Quantos dias à frente buscar quando não há targetDate (padrão: 14). Máx: 30.',
+          },
+          targetDate: {
+            type: 'string',
+            description:
+              'Data específica no formato YYYY-MM-DD (ex: "2026-02-23"). ' +
+              'Se omitido, retorna apenas os DIAS disponíveis sem horários. ' +
+              'Se informado, retorna os HORÁRIOS disponíveis naquele dia.',
           },
         },
         required: ['dentistId', 'procedureId'],

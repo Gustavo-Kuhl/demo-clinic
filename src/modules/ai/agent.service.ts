@@ -1,6 +1,13 @@
 import type OpenAI from 'openai';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import 'dayjs/locale/pt-br';
 import { openai, OPENAI_MODEL } from '../../config/openai';
+import { env } from '../../config/env';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { aiTools } from './tools';
@@ -234,10 +241,11 @@ async function executeToolCall(
       }
 
       case 'get_available_slots': {
-        const { dentistId, procedureId, daysAhead = 14 } = args as {
+        const { dentistId, procedureId, daysAhead = 14, targetDate } = args as {
           dentistId: string;
           procedureId: string;
           daysAhead?: number;
+          targetDate?: string;
         };
 
         const dentist = await dentistsRepo.getDentistById(dentistId);
@@ -255,7 +263,36 @@ async function executeToolCall(
             endTime: wh.endTime,
           }));
 
-        const slots = await calendarService.getAvailableSlotsForDays(
+        const dentistInfo = { id: dentist.id, name: dentist.name };
+        const procedureInfo = { id: procedure.id, name: procedure.name, durationMinutes: procedure.durationMinutes };
+
+        // Modo 2: paciente já escolheu o dia — retorna horários do dia específico
+        if (targetDate) {
+          const dayOfWeek = dayjs.tz(targetDate, env.TIMEZONE).day();
+          const wh = workingHoursByDay.find((h) => h.dayOfWeek === dayOfWeek);
+          if (!wh) {
+            return { error: 'O dentista não atende neste dia da semana. Escolha outra data da lista.' };
+          }
+          const daySlots = await calendarService.getAvailableSlots(
+            dentist.calendarId,
+            targetDate,
+            procedure.durationMinutes,
+            wh,
+          );
+          return {
+            dentist: dentistInfo,
+            procedure: procedureInfo,
+            date: targetDate,
+            displayDate: dayjs.tz(targetDate, env.TIMEZONE).locale('pt-br').format('dddd, DD [de] MMMM [de] YYYY'),
+            slots: daySlots,
+            message: daySlots.length === 0
+              ? 'Sem horários disponíveis neste dia. Peça ao paciente que escolha outra data.'
+              : null,
+          };
+        }
+
+        // Modo 1: sem dia definido — retorna apenas lista de dias disponíveis
+        const days = await calendarService.getAvailableSlotsForDays(
           dentist.calendarId,
           procedure.durationMinutes,
           workingHoursByDay,
@@ -263,20 +300,15 @@ async function executeToolCall(
         );
 
         return {
-          dentist: { id: dentist.id, name: dentist.name },
-          procedure: {
-            id: procedure.id,
-            name: procedure.name,
-            durationMinutes: procedure.durationMinutes,
-          },
-          availableDays: slots.map((day) => ({
+          dentist: dentistInfo,
+          procedure: procedureInfo,
+          availableDates: days.map((day) => ({
             date: day.date,
-            slots: day.slots,
+            displayDate: dayjs.tz(day.date, env.TIMEZONE).locale('pt-br').format('dddd, DD [de] MMMM'),
           })),
-          message:
-            slots.length === 0
-              ? 'Nenhum horário disponível nos próximos dias. Tente uma data diferente ou outro dentista.'
-              : null,
+          message: days.length === 0
+            ? 'Nenhum dia disponível nos próximos dias. Tente outro dentista ou amplie o período.'
+            : 'Apresente os dias ao paciente e pergunte qual prefere. Depois chame get_available_slots com targetDate.',
         };
       }
 
