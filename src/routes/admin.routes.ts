@@ -239,15 +239,14 @@ router.patch('/appointments/:id/cancel', adminAuth, async (req: Request, res: Re
   const appointment = await appointmentsRepo.getAppointmentById(id);
 
   if (!appointment) { res.status(404).json({ error: 'Agendamento não encontrado.' }); return; }
-  if (appointment.status === 'CANCELLED') { res.status(400).json({ error: 'Agendamento já está cancelado.' }); return; }
   if (appointment.status === 'COMPLETED') { res.status(400).json({ error: 'Não é possível cancelar uma consulta concluída.' }); return; }
 
   if (appointment.googleEventId && appointment.dentist.calendarId) {
     await calendarService.deleteCalendarEvent(appointment.dentist.calendarId, appointment.googleEventId);
   }
 
-  const updated = await appointmentsRepo.updateAppointmentStatus(id, 'CANCELLED');
-  res.json(updated);
+  await appointmentsRepo.deleteAppointmentById(id);
+  res.json({ success: true });
 });
 
 router.patch('/appointments/:id/reschedule', adminAuth, async (req: Request, res: Response) => {
@@ -479,6 +478,27 @@ router.patch('/patients/:id', adminAuth, async (req: Request, res: Response) => 
 
   const patient = await prisma.patient.update({ where: { id }, data });
   res.json(patient);
+});
+
+router.delete('/patients/:id', adminAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const patient = await prisma.patient.findUnique({ where: { id } });
+  if (!patient) {
+    res.status(404).json({ error: 'Paciente não encontrado.' });
+    return;
+  }
+
+  const convs = await prisma.conversation.findMany({ where: { patientId: id }, select: { id: true } });
+  const convIds = convs.map(c => c.id);
+
+  await prisma.$transaction([
+    prisma.appointment.deleteMany({ where: { patientId: id } }),
+    prisma.humanEscalation.deleteMany({ where: { conversationId: { in: convIds } } }),
+    prisma.conversation.deleteMany({ where: { patientId: id } }),
+    prisma.patient.delete({ where: { id } }),
+  ]);
+
+  res.json({ success: true });
 });
 
 export default router;

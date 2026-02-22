@@ -78,6 +78,10 @@ export async function updateAppointmentStatus(
   });
 }
 
+export async function deleteAppointmentById(id: string) {
+  return prisma.appointment.delete({ where: { id } });
+}
+
 export async function rescheduleAppointment(
   id: string,
   startTime: Date,

@@ -229,8 +229,8 @@ export default function Appointments() {
     setCancelling(true)
     setCancelError('')
     try {
-      const updated = await api.appointments.cancel(selected.id)
-      setSelected(updated)
+      await api.appointments.cancel(selected.id)
+      setSelected(null)
       await load()
     } catch (e: any) {
       setCancelError(e.message || 'Erro ao cancelar.')

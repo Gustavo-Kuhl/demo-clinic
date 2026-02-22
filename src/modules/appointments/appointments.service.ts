@@ -96,10 +96,6 @@ export async function cancelAppointment(
     return { success: false, error: 'Você não tem permissão para cancelar este agendamento.' };
   }
 
-  if (appointment.status === 'CANCELLED') {
-    return { success: false, error: 'Este agendamento já está cancelado.' };
-  }
-
   if (appointment.status === 'COMPLETED') {
     return { success: false, error: 'Não é possível cancelar uma consulta já realizada.' };
   }
@@ -112,7 +108,7 @@ export async function cancelAppointment(
     );
   }
 
-  await appointmentsRepo.updateAppointmentStatus(appointmentId, 'CANCELLED');
+  await appointmentsRepo.deleteAppointmentById(appointmentId);
 
   return { success: true };
 }

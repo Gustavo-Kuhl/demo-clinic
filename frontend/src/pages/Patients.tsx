@@ -63,6 +63,12 @@ export default function Patients() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
+  // Delete modal
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
   useEffect(() => {
     load()
   }, [])
@@ -125,6 +131,27 @@ export default function Patients() {
       setAppointments(data)
     } finally {
       setHistoryLoading(false)
+    }
+  }
+
+  function openDelete(p: Patient) {
+    setDeleteTarget(p)
+    setDeleteError('')
+    setDeleteOpen(true)
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await api.patients.delete(deleteTarget.id)
+      setPatients(prev => prev.filter(p => p.id !== deleteTarget.id))
+      setDeleteOpen(false)
+    } catch (e: any) {
+      setDeleteError(e.message ?? 'Erro ao excluir paciente')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -199,24 +226,20 @@ export default function Patients() {
                     <td className="px-5 py-3.5 text-slate-600">{formatCpf(p.cpf)}</td>
                     <td className="px-5 py-3.5 text-slate-600">{p.email ?? '—'}</td>
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center gap-1 text-slate-600">
+                      <button
+                        onClick={() => openHistory(p)}
+                        title="Ver consultas"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 transition-colors text-xs font-medium"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round"/>
+                        </svg>
                         {p._count?.appointments ?? 0}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-5 py-3.5 text-slate-500">{formatDate(p.createdAt)}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1 justify-end">
-                        <button
-                          onClick={() => openHistory(p)}
-                          title="Ver histórico"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                            <path d="M12 8v4l2 2" strokeLinecap="round"/>
-                            <path d="M3.05 11a9 9 0 1 0 .5-3" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M3 4v4h4" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
                         <button
                           onClick={() => openEdit(p)}
                           title="Editar dados"
@@ -225,6 +248,18 @@ export default function Patients() {
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
                             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => openDelete(p)}
+                          title="Excluir paciente"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <polyline points="3 6 5 6 21 6" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M10 11v6M14 11v6" strokeLinecap="round"/>
+                            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </button>
                       </div>
@@ -303,7 +338,7 @@ export default function Patients() {
       <Modal
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        title={historyPatient ? `Histórico — ${historyPatient.name ?? historyPatient.phone}` : 'Histórico'}
+        title={historyPatient ? `Consultas — ${historyPatient.name ?? historyPatient.phone}` : 'Consultas'}
       >
         {historyLoading ? (
           <div className="flex items-center justify-center py-10 gap-3 text-slate-500">
@@ -336,6 +371,47 @@ export default function Patients() {
             ))}
           </div>
         )}
+      </Modal>
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Excluir Paciente" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-100">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round"/>
+              <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round"/>
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-red-800">Esta ação é irreversível</p>
+              <p className="text-sm text-red-700 mt-0.5">
+                Todos os dados do paciente <strong>{deleteTarget?.name ?? deleteTarget?.phone}</strong> serão excluídos permanentemente, incluindo consultas e histórico de conversas.
+              </p>
+            </div>
+          </div>
+
+          {deleteError && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{deleteError}</p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-5 py-2 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors"
+            >
+              {deleting && <Spinner light />}
+              {deleting ? 'Excluindo…' : 'Excluir permanentemente'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

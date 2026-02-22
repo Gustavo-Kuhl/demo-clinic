@@ -74,7 +74,7 @@ export const api = {
     create: (data: { patientId: string; dentistId: string; procedureId: string; startTime: string; notes?: string }) =>
       request<Appointment>('/appointments', { method: 'POST', body: JSON.stringify(data) }),
     cancel: (id: string) =>
-      request<Appointment>(`/appointments/${id}/cancel`, { method: 'PATCH' }),
+      request<{ success: boolean }>(`/appointments/${id}/cancel`, { method: 'PATCH' }),
     reschedule: (id: string, newStartTime: string) =>
       request<Appointment>(`/appointments/${id}/reschedule`, { method: 'PATCH', body: JSON.stringify({ newStartTime }) }),
     getSlots: (dentistId: string, procedureId: string, daysAhead = 14) => {
@@ -115,6 +115,8 @@ export const api = {
     },
     update: (id: string, data: { name?: string; cpf?: string; email?: string; phone?: string }) =>
       request<Patient>(`/patients/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/patients/${id}`, { method: 'DELETE' }),
     getAppointments: (id: string) =>
       request<Appointment[]>(`/patients/${id}/appointments`),
   },
