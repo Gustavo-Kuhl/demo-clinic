@@ -23,16 +23,14 @@ export async function processMessage(
   patientPhone: string,
   incomingMessage: string,
 ): Promise<string> {
-  // 1. Busca ou cria o paciente
-  const patient = await patientsRepo.findOrCreatePatient(patientPhone);
-
-  // 2. Busca ou cria a conversa ativa
+  // 1. Busca conversa ativa para este número (respeita troca de paciente via createNew)
   let conversation = await prisma.conversation.findFirst({
     where: {
-      patientId: patient.id,
+      patient: { phone: patientPhone },
       status: 'ACTIVE',
     },
     include: {
+      patient: true,
       messages: {
         orderBy: { timestamp: 'desc' },
         take: MAX_HISTORY_MESSAGES,
@@ -41,13 +39,16 @@ export async function processMessage(
     orderBy: { lastMessageAt: 'desc' },
   });
 
+  // 2. Usa o paciente da conversa ativa ou busca/cria o paciente principal do número
+  const patient = conversation?.patient ?? await patientsRepo.findOrCreatePatient(patientPhone);
+
   if (!conversation) {
     conversation = await prisma.conversation.create({
       data: {
         patientId: patient.id,
         status: 'ACTIVE',
       },
-      include: { messages: true },
+      include: { patient: true, messages: true },
     });
   }
 
