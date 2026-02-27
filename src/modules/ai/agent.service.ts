@@ -10,10 +10,10 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
-import { selectTools } from './tools';
-import { detectStage, classifyIntent } from './intent-classifier';
+import { aiTools } from './tools';
 import { buildSystemPrompt } from './prompts/system.prompt';
 import * as appointmentsService from '../appointments/appointments.service';
+import * as appointmentsRepo from '../appointments/appointments.repository';
 import * as dentistsRepo from '../dentists/dentists.repository';
 import * as proceduresRepo from '../procedures/procedures.repository';
 import * as calendarService from '../calendar/google-calendar.service';
@@ -21,7 +21,7 @@ import * as patientsRepo from '../patients/patients.repository';
 
 type Message = OpenAI.Chat.ChatCompletionMessageParam;
 
-const MAX_HISTORY_MESSAGES = 8;  // Booking completo usa ≤ 8 trocas — 20 era desperdício
+const MAX_HISTORY_MESSAGES = 20; // Mantém as últimas 20 mensagens para contexto
 const MAX_TOOL_ITERATIONS = 10; // Evita loop infinito
 
 /**
@@ -100,29 +100,7 @@ export async function processMessage(
     content: incomingMessage,
   });
 
-  // 7. Detecção de estágio + classificação pre-LLM
-  const lastBotMessage = [...conversation.messages]
-    .reverse()
-    .find(m => m.role === 'assistant')?.content ?? '';
-
-  const stage = detectStage(lastBotMessage);
-  const intent = classifyIntent(incomingMessage, stage);
-
-  logger.debug(`[AI] stage=${stage} intent=${intent}`);
-
-  // Resposta determinística para "não" em pré-confirmação — zero chamadas LLM
-  if (stage === 'pre_confirmation' && intent === 'deny') {
-    const denyResponse = 'Tudo bem! Quer escolher outro horário ou outro dia? 😊';
-    await prisma.message.create({
-      data: { conversationId: conversation.id, direction: 'OUTBOUND', content: denyResponse, role: 'assistant' },
-    });
-    return denyResponse;
-  }
-
-  // Seleciona subset de tools adequado ao estágio (reduz tokens por chamada)
-  const tools = selectTools(stage);
-
-  // 8. Executa o loop do agente com function calling
+  // 7. Executa o loop do agente com function calling
   const messages: Message[] = [
     { role: 'system', content: systemPrompt },
     ...historyMessages,
@@ -143,7 +121,7 @@ export async function processMessage(
       response = await openai.chat.completions.create({
         model: OPENAI_MODEL,
         messages,
-        tools,
+        tools: aiTools,
         tool_choice: 'auto',
         temperature: 0.7,
         max_tokens: 1024,
