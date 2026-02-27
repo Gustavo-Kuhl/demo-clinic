@@ -1,5 +1,41 @@
 import type OpenAI from 'openai';
 
+// ── Conversation stage — detected deterministically from last bot message ──
+export type ConversationStage =
+  | 'initial'          // new conversation or unknown context → all tools
+  | 'awaiting_day'     // shown dentist+procedure, waiting for patient to say a day
+  | 'awaiting_time'    // shown available days, waiting for patient to pick a time
+  | 'pre_confirmation' // shown pre-confirmation summary, waiting for "sim"/"não"
+  | 'cancel_flow'      // in cancellation/reschedule flow
+  | 'registration';    // waiting for patient name/CPF
+
+/**
+ * Returns a reduced subset of tools appropriate for the current conversation stage.
+ * Falls back to all tools (initial) when stage is unknown.
+ */
+export function selectTools(stage: ConversationStage): OpenAI.Chat.ChatCompletionTool[] {
+  switch (stage) {
+    case 'pre_confirmation':
+      // Only need to create the appointment (+ slots as fallback if IDs missing)
+      return _tools(['create_appointment', 'get_available_slots', 'escalate_to_human']);
+    case 'awaiting_time':
+      return _tools(['get_available_slots', 'escalate_to_human', 'register_patient']);
+    case 'awaiting_day':
+      return _tools(['get_available_slots', 'get_patient_appointments', 'escalate_to_human', 'register_patient']);
+    case 'cancel_flow':
+      return _tools(['get_patient_appointments', 'cancel_appointment', 'reschedule_appointment', 'get_available_slots', 'escalate_to_human']);
+    case 'registration':
+      return _tools(['register_patient', 'escalate_to_human']);
+    case 'initial':
+    default:
+      return aiTools;
+  }
+}
+
+function _tools(names: string[]): OpenAI.Chat.ChatCompletionTool[] {
+  return aiTools.filter(t => names.includes(t.function.name));
+}
+
 export const aiTools: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: 'function',
