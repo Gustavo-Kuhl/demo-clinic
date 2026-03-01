@@ -15,7 +15,7 @@ const envSchema = z.object({
 
   // OpenAI
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY é obrigatório'),
-  OPENAI_MODEL: z.string().default('gpt-4.1-mini'),
+  OPENAI_MODEL: z.string().default('gpt-4.1-nano'),
 
   // Evolution API (WhatsApp)
   EVOLUTION_API_URL: z.string().min(1, 'EVOLUTION_API_URL é obrigatório'),

@@ -13,6 +13,7 @@ import { logger } from '../../config/logger';
 import { aiTools } from './tools';
 import { buildSystemPrompt } from './prompts/system.prompt';
 import * as appointmentsService from '../appointments/appointments.service';
+import { isValidCpf } from '../../utils/cpf';
 import * as appointmentsRepo from '../appointments/appointments.repository';
 import * as dentistsRepo from '../dentists/dentists.repository';
 import * as proceduresRepo from '../procedures/procedures.repository';
@@ -541,6 +542,13 @@ async function executeToolCall(
         }
 
         const cleanCpf = cpf ? cpf.replace(/\D/g, '') : undefined;
+
+        // Valida formato do CPF
+        if (cleanCpf) {
+          if (!isValidCpf(cleanCpf)) {
+            return { error: 'CPF inválido. Por favor, verifique o número informado (deve ter 11 dígitos).' };
+          }
+        }
 
         // Verifica se CPF já pertence a outro paciente
         if (cleanCpf) {

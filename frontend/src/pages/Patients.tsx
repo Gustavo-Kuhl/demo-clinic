@@ -17,6 +17,22 @@ function formatCpf(cpf?: string) {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
 }
 
+function isValidCpf(raw: string): boolean {
+  const cpf = raw.replace(/\D/g, '')
+  if (cpf.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(cpf)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += Number(cpf[i]) * (10 - i)
+  let rem = (sum * 10) % 11
+  if (rem === 10 || rem === 11) rem = 0
+  if (rem !== Number(cpf[9])) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += Number(cpf[i]) * (11 - i)
+  rem = (sum * 10) % 11
+  if (rem === 10 || rem === 11) rem = 0
+  return rem === Number(cpf[10])
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -103,6 +119,11 @@ export default function Patients() {
 
   async function saveEdit() {
     if (!selected) return
+    const cleanCpf = form.cpf.replace(/\D/g, '')
+    if (cleanCpf && !isValidCpf(cleanCpf)) {
+      setEditError('CPF inválido. Verifique o número informado.')
+      return
+    }
     setSaving(true)
     setEditError('')
     try {
@@ -294,11 +315,15 @@ export default function Patients() {
             </Field>
             <Field label="CPF">
               <input
-                className="input"
+                className={`input ${form.cpf && !isValidCpf(form.cpf) ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 value={form.cpf}
                 onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))}
                 placeholder="000.000.000-00"
+                maxLength={14}
               />
+              {form.cpf && !isValidCpf(form.cpf) && (
+                <span className="text-xs text-red-500 mt-1 block">CPF inválido</span>
+              )}
             </Field>
             <Field label="E-mail">
               <input

@@ -10,6 +10,7 @@ import * as appointmentsRepo from '../modules/appointments/appointments.reposito
 import * as appointmentsService from '../modules/appointments/appointments.service';
 import * as calendarService from '../modules/calendar/google-calendar.service';
 import { getInstanceStatus } from '../modules/whatsapp/evolution.service';
+import { isValidCpf } from '../utils/cpf';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -465,6 +466,10 @@ router.patch('/patients/:id', adminAuth, async (req: Request, res: Response) => 
   if (cpf !== undefined) {
     const cleanCpf = cpf ? cpf.replace(/\D/g, '') : '';
     if (cleanCpf) {
+      if (!isValidCpf(cleanCpf)) {
+        res.status(400).json({ error: 'CPF inválido. Verifique o número informado (deve ter 11 dígitos).' });
+        return;
+      }
       const existing = await prisma.patient.findFirst({ where: { cpf: cleanCpf, NOT: { id } } });
       if (existing) {
         res.status(400).json({ error: 'Este CPF já está cadastrado para outro paciente.' });
