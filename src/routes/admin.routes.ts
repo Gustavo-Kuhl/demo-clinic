@@ -466,8 +466,12 @@ router.patch('/patients/:id', adminAuth, async (req: Request, res: Response) => 
   if (cpf !== undefined) {
     const cleanCpf = cpf ? cpf.replace(/\D/g, '') : '';
     if (cleanCpf) {
+      if (cleanCpf.length !== 11) {
+        res.status(400).json({ error: `CPF deve ter 11 dígitos. O número informado tem ${cleanCpf.length} dígito(s).` });
+        return;
+      }
       if (!isValidCpf(cleanCpf)) {
-        res.status(400).json({ error: 'CPF inválido. Verifique o número informado (deve ter 11 dígitos).' });
+        res.status(400).json({ error: 'CPF inválido — os dígitos verificadores não conferem.' });
         return;
       }
       const existing = await prisma.patient.findFirst({ where: { cpf: cleanCpf, NOT: { id } } });

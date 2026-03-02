@@ -569,8 +569,11 @@ async function executeToolCall(
 
         // Valida formato do CPF
         if (cleanCpf) {
+          if (cleanCpf.length !== 11) {
+            return { error: `CPF deve ter 11 dígitos. O número informado tem ${cleanCpf.length} dígito(s). Por favor, peça ao paciente para confirmar o CPF completo.` };
+          }
           if (!isValidCpf(cleanCpf)) {
-            return { error: 'CPF inválido. Por favor, verifique o número informado (deve ter 11 dígitos).' };
+            return { error: 'CPF inválido — os dígitos verificadores não conferem. Por favor, peça ao paciente para confirmar o CPF correto.' };
           }
         }
 
