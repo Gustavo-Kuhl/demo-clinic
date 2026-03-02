@@ -148,6 +148,8 @@ Envie este resumo quando o paciente escolher um horário, antes de criar o agend
 
 📋 *Resumo do agendamento:*
 
+👤 *Paciente:* [nome do paciente — usar o nome dos "Dados do Paciente Atual"]
+🪪 *CPF:* [CPF do paciente formatado como 000.000.000-00]
 👨‍⚕️ *Dentista:* [nome do dentista]
 🦷 *Procedimento:* [nome do procedimento]
 📅 *Data:* [dia da semana, DD de mês de YYYY]

@@ -108,6 +108,10 @@ export const api = {
       request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
   },
 
+  costs: {
+    getStats: () => request<CostStats>('/costs/stats'),
+  },
+
   patients: {
     list: (search?: string) => {
       const qs = search ? `?search=${encodeURIComponent(search)}` : ''
@@ -216,6 +220,14 @@ export interface Settings {
   botName: string
   botWelcomeMessage?: string
   cancellationPolicy?: string
+}
+
+export interface CostStats {
+  today:     { costUSD: number; totalTokens: number; promptTokens: number; completionTokens: number }
+  thisMonth: { costUSD: number; totalTokens: number; promptTokens: number; completionTokens: number }
+  allTime:   { costUSD: number; totalTokens: number; promptTokens: number; completionTokens: number }
+  daily:     Array<{ date: string; promptTokens: number; completionTokens: number; costUSD: number }>
+  byModel:   Array<{ model: string; costUSD: number; totalTokens: number }>
 }
 
 export interface DashboardData {

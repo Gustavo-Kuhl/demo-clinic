@@ -239,3 +239,19 @@ model SystemSettings {
 
   @@map("system_settings")
 }
+
+// ========================
+// USO DE TOKENS / CUSTO IA
+// ========================
+model TokenUsageLog {
+  id               String   @id @default(cuid())
+  conversationId   String?
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  costUSD          Float
+  createdAt        DateTime @default(now())
+
+  @@map("token_usage_logs")
+}

@@ -506,4 +506,76 @@ router.delete('/patients/:id', adminAuth, async (req: Request, res: Response) =>
   res.json({ success: true });
 });
 
+// ── Custos IA ──────────────────────────────────────────────
+router.get('/costs/stats', adminAuth, async (_req: Request, res: Response) => {
+  const now = dayjs().tz(env.TIMEZONE);
+  const startOfToday = now.startOf('day').toDate();
+  const startOfMonth = now.startOf('month').toDate();
+  const thirtyDaysAgo = now.subtract(29, 'day').startOf('day').toDate();
+
+  const [todayRows, monthRows, allRows, dailyRaw, byModelRaw] = await Promise.all([
+    prisma.tokenUsageLog.aggregate({
+      where: { createdAt: { gte: startOfToday } },
+      _sum: { costUSD: true, promptTokens: true, completionTokens: true, totalTokens: true },
+    }),
+    prisma.tokenUsageLog.aggregate({
+      where: { createdAt: { gte: startOfMonth } },
+      _sum: { costUSD: true, promptTokens: true, completionTokens: true, totalTokens: true },
+    }),
+    prisma.tokenUsageLog.aggregate({
+      _sum: { costUSD: true, promptTokens: true, completionTokens: true, totalTokens: true },
+    }),
+    prisma.tokenUsageLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      select: { createdAt: true, promptTokens: true, completionTokens: true, costUSD: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.tokenUsageLog.groupBy({
+      by: ['model'],
+      _sum: { costUSD: true, totalTokens: true },
+      orderBy: { _sum: { costUSD: 'desc' } },
+    }),
+  ]);
+
+  // Agrupa dailyRaw por data (YYYY-MM-DD no timezone configurado)
+  const dailyMap = new Map<string, { promptTokens: number; completionTokens: number; costUSD: number }>();
+  for (const row of dailyRaw) {
+    const date = dayjs(row.createdAt).tz(env.TIMEZONE).format('YYYY-MM-DD');
+    const existing = dailyMap.get(date) ?? { promptTokens: 0, completionTokens: 0, costUSD: 0 };
+    dailyMap.set(date, {
+      promptTokens: existing.promptTokens + row.promptTokens,
+      completionTokens: existing.completionTokens + row.completionTokens,
+      costUSD: existing.costUSD + row.costUSD,
+    });
+  }
+  const daily = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, ...v }));
+
+  res.json({
+    today: {
+      costUSD: todayRows._sum.costUSD ?? 0,
+      totalTokens: todayRows._sum.totalTokens ?? 0,
+      promptTokens: todayRows._sum.promptTokens ?? 0,
+      completionTokens: todayRows._sum.completionTokens ?? 0,
+    },
+    thisMonth: {
+      costUSD: monthRows._sum.costUSD ?? 0,
+      totalTokens: monthRows._sum.totalTokens ?? 0,
+      promptTokens: monthRows._sum.promptTokens ?? 0,
+      completionTokens: monthRows._sum.completionTokens ?? 0,
+    },
+    allTime: {
+      costUSD: allRows._sum.costUSD ?? 0,
+      totalTokens: allRows._sum.totalTokens ?? 0,
+      promptTokens: allRows._sum.promptTokens ?? 0,
+      completionTokens: allRows._sum.completionTokens ?? 0,
+    },
+    daily,
+    byModel: byModelRaw.map(r => ({
+      model: r.model,
+      costUSD: r._sum.costUSD ?? 0,
+      totalTokens: r._sum.totalTokens ?? 0,
+    })),
+  });
+});
+
 export default router;

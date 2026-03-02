@@ -132,6 +132,30 @@ export async function processMessage(
       break;
     }
 
+    // Registra uso de tokens (fire-and-forget)
+    if (response.usage) {
+      const MODEL_PRICES: Record<string, [number, number]> = {
+        'gpt-4.1-mini': [0.40, 1.60],
+        'gpt-4.1-nano': [0.10, 0.40],
+        'gpt-5-mini':   [0.25, 2.00],
+        'gpt-4o-mini':  [0.15, 0.60],
+      };
+      const [inP, outP] = MODEL_PRICES[OPENAI_MODEL] ?? [0.40, 1.60];
+      const costUSD =
+        (response.usage.prompt_tokens / 1_000_000) * inP +
+        (response.usage.completion_tokens / 1_000_000) * outP;
+      prisma.tokenUsageLog.create({
+        data: {
+          conversationId: conversation.id,
+          model: OPENAI_MODEL,
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+          costUSD,
+        },
+      }).catch(() => {});
+    }
+
     const choice = response.choices[0];
     const assistantMessage = choice.message;
 

@@ -9,6 +9,7 @@ import Patients from './pages/Patients'
 import Escalations from './pages/Escalations'
 import FAQ from './pages/FAQ'
 import Settings from './pages/Settings'
+import Costs from './pages/Costs'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token')
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/escalacoes" element={<RequireAuth><Escalations /></RequireAuth>} />
         <Route path="/faq" element={<RequireAuth><FAQ /></RequireAuth>} />
         <Route path="/configuracoes" element={<RequireAuth><Settings /></RequireAuth>} />
+        <Route path="/custos" element={<RequireAuth><Costs /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

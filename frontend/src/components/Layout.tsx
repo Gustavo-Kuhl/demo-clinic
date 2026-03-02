@@ -10,6 +10,7 @@ const navItems = [
   { to: '/escalacoes', label: 'Escalações', icon: <AlertIcon /> },
   { to: '/faq', label: 'FAQ', icon: <QuestionIcon /> },
   { to: '/configuracoes', label: 'Configurações', icon: <SettingsIcon /> },
+  { to: '/custos', label: 'Custos IA', icon: <CostIcon /> },
 ]
 
 // Each nav item: py-2.5 (10px*2) + text-sm line-height (20px) = 40px
@@ -235,6 +236,14 @@ function UsersIcon() {
       <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" strokeLinecap="round"/>
       <path d="M16 3.13a4 4 0 010 7.75" strokeLinecap="round"/>
       <path d="M21 20c0-3-1.8-5.4-4-6" strokeLinecap="round"/>
+    </svg>
+  )
+}
+function CostIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="9" strokeLinecap="round"/>
+      <path d="M12 7v1m0 8v1M9.5 9.5a2.5 2.5 0 015 0c0 1.5-1.5 2-2.5 2.5S9.5 13 9.5 14.5a2.5 2.5 0 005 0" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
