@@ -216,6 +216,5 @@ export function formatAppointmentForDisplay(
     `📅 ${dayOfWeek}, ${start.date()} de ${month} de ${start.year()}`,
     `🕐 ${start.format('HH:mm')}`,
     `⏱️ Duração: ${appointment.procedure.durationMinutes} min`,
-    `🆔 ID: \`${appointment.id.slice(-8)}\``,
   ].join('\n');
 }
