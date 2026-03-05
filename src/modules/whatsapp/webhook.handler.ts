@@ -129,11 +129,30 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
   pendingQueues.set(phone, { texts, timer });
 }
 
+const TOOL_WAIT_MESSAGES: Record<string, string> = {
+  get_dentists:            '_Consultando os dentistas disponíveis... ⏳_',
+  get_procedures:          '_Buscando os procedimentos... ⏳_',
+  get_available_slots:     '_Verificando os horários disponíveis... ⏳_',
+  create_appointment:      '_Confirmando seu agendamento... ⏳_',
+  get_patient_appointments:'_Buscando suas consultas... ⏳_',
+  cancel_appointment:      '_Processando o cancelamento... ⏳_',
+  reschedule_appointment:  '_Processando o reagendamento... ⏳_',
+  register_patient:        '_Cadastrando suas informações... ⏳_',
+  search_faq:              '_Buscando informações... ⏳_',
+  escalate_to_human:       '_Transferindo para um atendente humano... ⏳_',
+  update_patient_name:     '_Atualizando seu cadastro... ⏳_',
+};
+
 async function processAndRespond(phone: string, messageText: string): Promise<void> {
   await evolutionService.sendTyping(phone, 2000);
 
   try {
-    const response = await agentService.processMessage(phone, messageText);
+    const response = await agentService.processMessage(phone, messageText, async (toolName) => {
+      const msg = TOOL_WAIT_MESSAGES[toolName] ?? '_Processando... ⏳_';
+      await evolutionService.sendTyping(phone, 800);
+      await delay(800);
+      await evolutionService.sendTextMessage(phone, msg);
+    });
 
     // Divide em partes pelo marcador [PAUSA] e envia cada uma separadamente
     const parts = response.split('[PAUSA]').map((p) => p.trim()).filter(Boolean);

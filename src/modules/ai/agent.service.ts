@@ -31,6 +31,7 @@ const MAX_TOOL_ITERATIONS = 10; // Evita loop infinito
 export async function processMessage(
   patientPhone: string,
   incomingMessage: string,
+  onToolCall?: (toolName: string) => Promise<void>,
 ): Promise<string> {
   // 1. Busca conversa ativa para este número (respeita troca de paciente via createNew)
   let conversation = await prisma.conversation.findFirst({
@@ -166,6 +167,11 @@ export async function processMessage(
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
       finalResponse = assistantMessage.content || '';
       break;
+    }
+
+    // Notifica usuário que está processando (primeira tool da iteração)
+    if (onToolCall) {
+      await onToolCall(assistantMessage.tool_calls[0].function.name);
     }
 
     // Processa cada tool call
